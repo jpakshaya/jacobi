@@ -14,7 +14,6 @@ This project implements the **Jacobi iterative method** for solving 2D steady-st
 - [2. Basic CUDA Implementation](#2-basic-cuda-implementation)
 - [3. Optimized CUDA Implementation](#3-optimized-cuda-implementation)
 - [Performance Comparison](#performance-comparison)
-- [Nsight Compute Analysis](#nsight-compute-analysis)
 - [How to Build and Run](#how-to-build-and-run)
 
 ---
@@ -41,7 +40,9 @@ This process is repeated until the solution converges (maximum difference betwee
 - All other boundaries: 0°C
 - Interior points start at 0°C
 
-*(Insert grid visualization / initial condition image here)*
+**Jacobi 10X10 for visualization** 
+
+![Jacobi Grid](images/grid.png)
 
 ---
 
@@ -56,7 +57,7 @@ The serial version performs the Jacobi iteration entirely on the CPU using neste
 ### Time Taken
 **Time taken by serial code:** `178.484957` seconds
 
-*(Insert screenshot of serial code execution here)*
+![Serial Time](images/serial_time.png)
 
 **Conclusion:**  
 The pure CPU implementation is straightforward but extremely slow for large grids (1000×1000) due to the high number of iterations required.
@@ -78,23 +79,33 @@ The pure CPU implementation is straightforward but extremely slow for large grid
 **GPU Time:** `1.730222` seconds  
 **Total Time:** `1.738451` seconds
 
-*(Insert screenshot of basic CUDA code execution here)*
+![Initial Time](images/initial_time.png)
 
 ### Speedup
-**Speedup vs Serial:** ≈ **103×** faster
+Speedup= 178.484957 / 0.918712 = 194.6
+**Speedup is ≈ **195×** faster than serial**
 
 ### Nsight Compute Analysis
 
 **Key Metrics:**
-- Compute (SM) Throughput: **88.43%**
-- Memory Throughput: **88.43%**
-- Achieved Occupancy: **92.25%**
-- High overall throughput (>80%)
+- Compute (SM) Throughput: **47.00%**
+- Memory Throughput: **66.81%**
+- Duration: **35.74 μs** per kernel launch (much lower than basic version)
+- Lower compute throughput but **much better memory efficiency** and faster kernel execution.
 
 **Conclusion from Nsight Compute:**
-The basic CUDA version achieves very high compute and memory utilization. The kernel is well-balanced, but there is still room for optimization by reducing global memory accesses using **shared memory tiling**.
+- Memory is more heavily utilized than compute (as expected in stencil computations).
+- Shared memory tiling successfully reduced global memory pressure.
+- Kernel runtime per iteration is dramatically reduced.
+- Further improvements possible through kernel fusion or better occupancy tuning.
 
-*(Insert Nsight Compute screenshots for basic CUDA version here)*
+
+**Conclusion from Nsight Compute:**
+Nsight highlights that memory is the dominant factor here, suggesting potential benefits from optimizations that improve data locality (such as shared memory tiling).
+
+![Nsight Compute Analysis](images/initial_nsight_compute.png)
+![Nsight Compute Details](images/initial_nsight_compute_details_1.png)
+![Nsight Compute Details](images/initial_nsight_compute_details_2.png)
 
 ---
 
@@ -111,27 +122,30 @@ The optimized version introduces **shared memory tiling** to significantly reduc
 - Pointer swapping instead of using `swap_grids` kernel (minor performance gain).
 
 ### Time Taken
-*(Insert screenshot of optimized CUDA execution here)*
+![Optimised Time](images/optimized_time.png)
 
 ### Speedup
-**Speedup vs Serial:** Significantly higher than basic CUDA  
-**Speedup vs Basic CUDA:** Improved due to reduced global memory accesses
+
+Speedup= 178.484957 / 1.738451 = 102.7  
+**Speedup is ≈ **103×** faster than serial**
+
 
 ### Nsight Compute Analysis
 
 **Key Metrics:**
-- Compute (SM) Throughput: **47.00%**
-- Memory Throughput: **66.81%**
-- Duration: **35.74 μs** per kernel launch (much lower than basic version)
-- Lower compute throughput but **much better memory efficiency** and faster kernel execution.
+- Compute (SM) Throughput: **88.43%**
+- Memory Throughput: **88.43%**
+- Achieved Occupancy: **92.25%**
+- High overall throughput (>80%)
+
 
 **Conclusion from Nsight Compute:**
-- Memory is more heavily utilized than compute (as expected in stencil computations).
-- Shared memory tiling successfully reduced global memory pressure.
-- Kernel runtime per iteration is dramatically reduced.
-- Further improvements possible through kernel fusion or better occupancy tuning.
+- This optimized version achieves very high and balanced throughput for both Compute and Memory.
+- The use of shared memory tiling has significantly improved data reuse, allowing the SMs to stay busy and deliver strong performance.
+- Nsight indicates this workload is efficiently utilizing the available compute and memory bandwidth of the GPU.
 
-*(Insert Nsight Compute screenshots for optimized CUDA version here - both Summary and Details tabs)*
+![Optimised nsight compute](images/optimized_nsight_compute.png)
+![Optimised Time details](images/optimized_nsight_compute_details.png)
 
 ---
 
@@ -139,21 +153,15 @@ The optimized version introduces **shared memory tiling** to significantly reduc
 
 | Implementation       | Execution Time (s) | Speedup vs Serial |
 |----------------------|--------------------|-------------------|
-| Serial (CPU)         | 178.48            | 1×               |
-| Basic CUDA           | 1.738             | ~103×            |
-| Optimized CUDA       | ~0.917            | ~195×            |
+| Serial (CPU)         | 178.48             | 1×                |
+| Basic CUDA           | ~0.917             | ~195×             |
+| Optimized CUDA       | 1.738              | ~103×             |
 
-*(Note: Optimized time taken from your first screenshot ≈ 0.917s)*
+**When grid size will be increased, significant results will be visible in basic and optimized clock time**
 
----
-
-## Nsight Compute Insights Summary
-
-- **Basic CUDA**: High throughput but higher latency per kernel due to many global memory accesses.
-- **Optimized CUDA**: Lower per-kernel duration thanks to shared memory. Better overall performance despite slightly lower SM throughput percentage (because the kernel finishes much faster).
-- Memory-bound nature of stencil computations is clearly visible.
 
 ---
+
 
 ## How to Build and Run
 
